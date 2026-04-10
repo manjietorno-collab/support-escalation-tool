@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PandaDoc Escalation Tool</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0f1117;--surface:#16181f;--card:#1c1f2a;--border:#252a38;
+    --accent:#4f8ef7;--accent-soft:#1a2a4a;--green:#2dd98f;--green-soft:#0d2e20;
+    --amber:#f5a623;--amber-soft:#3a2a0d;--red:#f75a5a;--red-soft:#3a1515;
+    --purple:#a78bfa;--purple-soft:#1e1a38;--text:#e8ecf4;--muted:#6b7a99;--subtle:#2a3040;
+  }
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;padding:0}
+  .header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 32px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
+  .header-left{display:flex;align-items:center;gap:14px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+  .header-title{font-weight:800;font-size:13px;letter-spacing:.06em;text-transform:uppercase}
+  .header-sub{font-size:11px;color:var(--muted)}
+  .sep{color:var(--border)}
+  .wrap{max-width:740px;margin:0 auto;padding:32px 24px}
+  .step{display:none}.step.active{display:block}
+  .section-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.75rem}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1rem}
+  .role-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem}
+  .role-btn{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.1rem;cursor:pointer;text-align:left;transition:all .15s;width:100%}
+  .role-btn:hover{border-color:var(--accent)}
+  .role-btn.selected{border:2px solid var(--accent);background:var(--accent-soft)}
+  .role-icon{font-size:24px;margin-bottom:.4rem;display:block}
+  .role-title{font-size:14px;font-weight:700;color:var(--text)}
+  .role-sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .scenario-list{display:flex;flex-direction:column;gap:8px}
+  .scenario-btn{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.9rem 1rem;cursor:pointer;text-align:left;transition:background .1s;width:100%}
+  .scenario-btn:hover{background:var(--subtle)}
+  .s-title{font-weight:700;font-size:14px;color:var(--text)}
+  .s-desc{font-size:12px;color:var(--muted);margin-top:3px}
+  .check-item{display:grid;grid-template-columns:1fr auto;align-items:start;gap:8px;padding:.7rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;transition:background .1s}
+  .check-item:hover{background:var(--subtle)}
+  .check-item.done{background:var(--green-soft);border-color:#1a5c3a}
+  .check-item.na{background:var(--subtle);border-color:var(--border);opacity:.75}
+  .check-left{display:flex;align-items:flex-start;gap:10px}
+  .check-box{width:20px;height:20px;border-radius:5px;border:1.5px solid var(--muted);flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px;font-size:11px;background:var(--surface)}
+  .check-item.done .check-box{background:var(--green);border-color:var(--green);color:#fff}
+  .check-item.na .check-box{background:var(--subtle);color:var(--muted)}
+  .check-text{font-size:13px;color:var(--text);line-height:1.5}
+  .check-item.done .check-text,.check-item.na .check-text{color:var(--muted)}
+  .check-item.na .check-text{text-decoration:line-through}
+  .na-btn{font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--subtle);color:var(--muted);cursor:pointer;white-space:nowrap;flex-shrink:0;align-self:flex-start;margin-top:3px;transition:all .1s}
+  .na-btn:hover{border-color:var(--muted)}
+  .na-btn.active{background:var(--amber-soft);color:var(--amber);border-color:var(--amber)}
+  .progress-bar{height:5px;background:var(--border);border-radius:3px;margin-bottom:.4rem}
+  .progress-fill{height:5px;border-radius:3px;background:var(--accent);transition:width .3s}
+  .progress-label{font-size:11px;color:var(--muted);margin-bottom:1rem}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:.6rem 1.1rem;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;cursor:pointer;transition:all .15s;font-family:inherit}
+  .btn:hover{background:var(--subtle)}
+  .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+  .btn-primary:hover{background:#2d6fd6;border-color:#2d6fd6}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:1rem}
+  .verdict{border-radius:12px;padding:1.25rem;margin-bottom:1rem}
+  .verdict.escalate{background:var(--green-soft);border:1px solid #1a5c3a}
+  .verdict.escalate .v-title{color:var(--green);font-size:16px;font-weight:700}
+  .verdict p{font-size:13px;margin-top:.5rem;line-height:1.6;color:var(--muted)}
+  .macro-tag{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:5px;background:var(--accent-soft);color:var(--accent);margin:2px 2px 2px 0;letter-spacing:.03em}
+  .breadcrumb{font-size:12px;color:var(--muted);margin-bottom:1rem;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:4px;letter-spacing:.04em}
+  .badge-T1{background:var(--purple-soft);color:var(--purple)}
+  .badge-T2{background:var(--accent-soft);color:var(--accent)}
+  .warning-box{background:var(--amber-soft);border:1px solid #6b4a0a;border-radius:8px;padding:.85rem 1rem;font-size:13px;color:var(--amber);margin-bottom:1rem;line-height:1.5}
+  .info-box{background:var(--green-soft);border:1px solid #1a5c3a;border-radius:8px;padding:.85rem 1rem;font-size:13px;color:var(--green);margin-bottom:1rem;line-height:1.5}
+  .note-output{background:#0a0c10;border:1px solid var(--border);border-radius:8px;padding:1rem;font-size:12px;font-family:'Courier New',Courier,monospace;color:#b8c4d8;line-height:1.9;white-space:pre-wrap;word-break:break-word;margin-bottom:.75rem;max-height:420px;overflow-y:auto}
+  .copy-btn{display:inline-flex;align-items:center;gap:6px;padding:.55rem 1.1rem;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;cursor:pointer;transition:all .15s;font-family:inherit;font-weight:700}
+  .copy-btn:hover{background:var(--subtle)}
+  .copy-btn.copied{background:var(--green-soft);border-color:var(--green);color:var(--green)}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+  .field-row.full{grid-template-columns:1fr}
+  .field-group{display:flex;flex-direction:column;gap:5px}
+  .field-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+  .req{color:var(--red);margin-left:2px}
+  .fi{width:100%;padding:.6rem .8rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-family:inherit;transition:border-color .15s}
+  .fi:focus{outline:none;border-color:var(--accent)}
+  textarea.fi{resize:vertical;min-height:76px;line-height:1.5}
+  select.fi{cursor:pointer}
+  .field-divider{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:.75rem 0 .5rem;border-top:1px solid var(--border);margin-top:.25rem}
+  .ts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px;margin-top:.5rem}
+  .ts-item{display:flex;align-items:center;gap:8px;padding:.55rem .75rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;color:var(--text);transition:background .1s}
+  .ts-item:hover{background:var(--subtle)}
+  .ts-item.done{background:var(--green-soft);border-color:#1a5c3a;color:var(--green)}
+  .ts-item.na-ts{background:var(--subtle);opacity:.7}
+  .ts-item.na-ts .ts-label{text-decoration:line-through;color:var(--muted)}
+  .ts-box{width:16px;height:16px;border-radius:3px;border:1.5px solid var(--muted);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;background:var(--surface)}
+  .ts-item.done .ts-box{background:var(--green);border-color:var(--green);color:#fff}
+  .ts-na-btn{font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;border:1px solid var(--border);background:var(--subtle);color:var(--muted);cursor:pointer;margin-left:auto;white-space:nowrap;flex-shrink:0}
+  .ts-na-btn.active{background:var(--amber-soft);color:var(--amber);border-color:var(--amber)}
+  .repro-steps{display:flex;flex-direction:column;gap:6px;margin-top:.5rem}
+  .repro-row{display:flex;align-items:center;gap:8px}
+  .repro-num{font-size:11px;font-weight:700;color:var(--muted);width:22px;flex-shrink:0;text-align:right}
+  .repro-input{flex:1;padding:.5rem .75rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;font-family:inherit}
+  .repro-input:focus{outline:none;border-color:var(--accent)}
+  .repro-add{font-size:12px;color:var(--accent);cursor:pointer;background:none;border:none;padding:.3rem 0;margin-top:4px;font-family:inherit;font-weight:700}
+  .repro-rm{font-size:12px;color:var(--muted);cursor:pointer;background:none;border:none;padding:0 4px;flex-shrink:0;transition:color .1s}
+  .repro-rm:hover{color:var(--red)}
+  .divider-line{height:1px;background:var(--border);margin:1.25rem 0}
+  @media(max-width:520px){
+    .field-row{grid-template-columns:1fr}
+    .role-grid{grid-template-columns:1fr}
+    .wrap{padding:20px 14px}
+    .header{padding:0 16px}
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="dot"></div>
+    <span class="header-title">PandaDoc Escalation Tool</span>
+    <span class="sep">|</span>
+    <span class="header-sub">Internal Use Only</span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- STEP: ROLE -->
+  <div class="step active" id="step-role">
+    <div class="section-label">Who are you?</div>
+    <div class="role-grid">
+      <button class="role-btn" onclick="selectRole('T1')" id="btn-T1">
+        <span class="role-icon">⭐</span>
+        <div class="role-title">T1 Agent</div>
+        <div class="role-sub">Frontline support</div>
+      </button>
+      <button class="role-btn" onclick="selectRole('T2')" id="btn-T2">
+        <span class="role-icon">💎</span>
+        <div class="role-title">T2 Agent</div>
+        <div class="role-sub">Escalations &amp; complex areas</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP: SCENARIO -->
+  <div class="step" id="step-scenario">
+    <div class="breadcrumb" id="bc-scenario"></div>
+    <div class="section-label">What's the escalation type?</div>
+    <div class="scenario-list" id="scenario-list"></div>
+    <div class="btn-row"><button class="btn" onclick="goTo('step-role')">← Back</button></div>
+  </div>
+
+  <!-- STEP: CHECKLIST -->
+  <div class="step" id="step-checklist">
+    <div class="breadcrumb" id="bc-check"></div>
+    <div class="section-label">Pre-escalation checklist</div>
+    <div class="progress-bar"><div class="progress-fill" id="prog" style="width:0%"></div></div>
+    <div class="progress-label" id="prog-label">0 of 0 complete</div>
+    <div id="checklist"></div>
+    <div id="checklist-warning" style="display:none" class="warning-box">⚠ Some required items are unchecked. Complete or mark N/A before escalating to avoid a mis-escalation flag.</div>
+    <div class="btn-row">
+      <button class="btn" onclick="goTo('step-scenario')">← Back</button>
+      <button class="btn btn-primary" onclick="goTo('step-form')">Fill escalation note →</button>
+    </div>
+  </div>
+
+  <!-- STEP: FORM -->
+  <div class="step" id="step-form">
+    <div class="breadcrumb" id="bc-form"></div>
+
+    <div class="card">
+      <div class="section-label">Agent &amp; ticket info</div>
+      <div class="field-row">
+        <div class="field-group"><span class="field-label">Your name<span class="req">*</span></span><input class="fi" id="f-agent" placeholder="e.g. John Doe"></div>
+        <div class="field-group"><span class="field-label">Ticket / Conversation ID<span class="req">*</span></span><input class="fi" id="f-ticket" placeholder="e.g. ICM-1029"></div>
+      </div>
+      <div class="field-row">
+        <div class="field-group"><span class="field-label">Customer / Company name</span><input class="fi" id="f-customer" placeholder="e.g. Acme Corp"></div>
+        <div class="field-group"><span class="field-label">Client MRR</span><input class="fi" id="f-mrr" placeholder="e.g. $59"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label">Issue details</div>
+      <div class="field-row full"><div class="field-group"><span class="field-label">Issue description / Actual result<span class="req">*</span></span><textarea class="fi" id="f-issue" style="min-height:96px" placeholder="Describe what the customer is experiencing and any error messages shown."></textarea></div></div>
+      <div class="field-row full"><div class="field-group"><span class="field-label">Expected result<span class="req">*</span></span><textarea class="fi" id="f-expected" placeholder="Describe what should happen instead."></textarea></div></div>
+      <div class="field-row">
+        <div class="field-group"><span class="field-label">Can you reproduce the issue?</span>
+          <select class="fi" id="f-repro"><option value="">— Select —</option><option>Yes</option><option>No</option><option>Partially</option><option>N/A</option></select>
+        </div>
+        <div class="field-group"><span class="field-label">JIRA link (if applicable)</span><input class="fi" id="f-jira" placeholder="https://pandadoc.atlassian.net/..."></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label">Document &amp; workspace info</div>
+      <div class="field-row">
+        <div class="field-group"><span class="field-label">Document / Template / Content Library URL</span><input class="fi" id="f-docurl" placeholder="URL or N/A"></div>
+        <div class="field-group"><span class="field-label">Workflow Template URL</span><input class="fi" id="f-wfurl" placeholder="URL or N/A"></div>
+      </div>
+      <div class="field-row">
+        <div class="field-group"><span class="field-label">Workflow Run URL</span><input class="fi" id="f-wfrun" placeholder="URL or N/A"></div>
+        <div class="field-group"><span class="field-label">Workspace ID</span><input class="fi" id="f-wsid" placeholder="e.g. dusmMb6vU5YoHcG5poBPbP"></div>
+      </div>
+      <div class="field-row">
+        <div class="field-group"><span class="field-label">Organization ID</span><input class="fi" id="f-orgid" placeholder="e.g. aGxr7nUDvAhAdKprvrofwS"></div>
+        <div class="field-group"><span class="field-label">PandaDoc Owner Email</span><input class="fi" id="f-owneremail" placeholder="e.g. owner@company.com"></div>
+      </div>
+      <div class="field-row">
+        <div class="field-group"><span class="field-label">Affected User Email</span><input class="fi" id="f-useremail" placeholder="e.g. user@company.com"></div>
+        <div class="field-group"><span class="field-label">Affected User License</span><input class="fi" id="f-license" placeholder="e.g. Standard"></div>
+      </div>
+      <div class="field-row">
+        <div class="field-group"><span class="field-label">User Account Role</span><input class="fi" id="f-role" placeholder="e.g. Admin Owner"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label">CRM information</div>
+      <div class="field-row">
+        <div class="field-group"><span class="field-label">CRM type</span>
+          <select class="fi" id="f-crm" onchange="toggleCRM()">
+            <option value="">— Select or N/A —</option>
+            <option>Salesforce</option>
+            <option>HubSpot</option>
+            <option>Pipedrive</option>
+            <option>Microsoft Dynamics</option>
+            <option>Other CRM</option>
+            <option>N/A</option>
+          </select>
+        </div>
+        <div class="field-group"><span class="field-label">CRM Object Record ID</span><input class="fi" id="f-crmobj" placeholder="If issue is tied to a specific record, or N/A"></div>
+      </div>
+      <div id="sf-fields" style="display:none">
+        <div class="field-row">
+          <div class="field-group"><span class="field-label">Salesforce Org ID</span><input class="fi" id="f-sforg" placeholder="e.g. 00D4W000006kbQw"></div>
+          <div class="field-group"><span class="field-label">Access to Salesforce Org</span>
+            <select class="fi" id="f-sfaccess"><option value="">— Select —</option><option>Granted</option><option>Not Granted</option><option>N/A</option></select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field-group"><span class="field-label">PandaDoc for Salesforce version installed</span><input class="fi" id="f-sfver" placeholder="e.g. 3.x.x or N/A"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label">Steps to reproduce</div>
+      <div class="repro-steps" id="repro-steps"></div>
+      <button class="repro-add" onclick="addReproStep()">+ Add step</button>
+    </div>
+
+    <div class="card">
+      <div class="section-label">Troubleshooting steps taken</div>
+      <div class="ts-grid" id="ts-grid"></div>
+    </div>
+
+    <div class="card">
+      <div class="section-label">Attachments / evidence collected</div>
+      <div class="ts-grid" id="attach-grid"></div>
+    </div>
+
+    <div id="form-warning" style="display:none" class="warning-box">⚠ Please fill in the required fields (marked with *) before generating the note.</div>
+    <div class="btn-row">
+      <button class="btn" onclick="goTo('step-checklist')">← Back</button>
+      <button class="btn btn-primary" onclick="generateNote()">Generate note →</button>
+    </div>
+  </div>
+
+  <!-- STEP: VERDICT -->
+  <div class="step" id="step-verdict">
+    <div class="breadcrumb" id="bc-verdict"></div>
+    <div id="verdict-content"></div>
+    <div class="btn-row">
+      <button class="btn" onclick="restart()">Start over</button>
+      <button class="btn" onclick="goTo('step-form')">← Edit note</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+var state={role:null,scenario:null,checks:{},tsChecks:{},attachChecks:{},reproSteps:[]};
+
+var SCENARIOS={
+  T1:[
+    {id:'t1-tech',label:'Technical bug / glitch',desc:'Issue cannot be resolved after troubleshooting steps → T3',dest:'T3',type:'Technical'},
+    {id:'t1-oos',label:'Out-of-scope area',desc:'Complex product area (API, CRM, Zapier, CPQ, SSO, Security) → T2',dest:'T2',type:'Out-of-Scope'},
+    {id:'t1-ci',label:'Customer-initiated escalation',desc:'Customer requesting supervisor or higher tier → T2',dest:'T2',type:'Customer-Initiated'},
+    {id:'t1-complaint',label:'Complaint about Sales/CS rep',desc:'Customer complaining about a specific team member → Manager',dest:'Manager',type:'Complaint'},
+  ],
+  T2:[
+    {id:'t2-tech',label:'Technical bug / glitch',desc:'Complex product area issue requiring T3 investigation → T3',dest:'T3',type:'Technical'},
+    {id:'t2-ci',label:'Customer-initiated escalation',desc:'Customer requesting Supervisor or Support Lead → Lead',dest:'Lead',type:'Customer-Initiated'},
+    {id:'t2-complaint',label:'Complaint about Sales/CS rep',desc:'Customer complaining about a specific team member → Manager',dest:'Manager',type:'Complaint'},
+  ]
+};
+
+var CHECKLISTS={
+  't1-tech':['Reviewed account details and user permissions','Verified feature is provisioned via Ursa Major / enabled in PandaDoc','Identified where the problem is occurring (Template, Document, Integration, etc.)','Attempted to recreate the customer\'s issue in PandaDoc','Asked customer to complete browser/integration troubleshooting','Checked PandaPedia, JIRA, Slack, Unleashed for known bugs or workarounds','Confirmed 4+ troubleshooting steps attempted OR confirmed JIRA bug with no workaround','Collected all relevant info (template/doc links, JSON payloads, screen recordings)','Applied T3 Pre-Escalation Note to advise the customer'],
+  't1-oos':['Confirmed product area is T2-scope (API, CRM, Zapier, CPQ, SSO, or Security)','Verified T2 agents are available (agent on fewer than 5 conversations)','Noted customer UUIDs, clear issue description, and relevant resource links','Changed ticket state to In Progress after applying Transfer macro'],
+  't1-ci':['Confirmed no substantial progress was made on the customer\'s original issue','Converted conversation to a ticket','Applied T2 Pre-Escalation Note to advise the customer','Noted Support Manager on duty in the macro note','Set High Priority if ticket is near SLA breach','Changed ticket state to In Progress'],
+  't1-complaint':['Gathered full details on what happened and the nature of the complaint','Requested screenshots or Salesforce record to verify the interaction','Customer has provided sufficient evidence','Confirmed the relevant AM/CSM manager via Sapling'],
+  't2-tech':['Reviewed all T1 actions and prior troubleshooting steps','Reviewed account details and user permissions','Confirmed the feature is provisioned via Ursa Major','Attempted to reproduce the issue OR connected to existing incident in #support-collab','Completed 5+ troubleshooting steps for the complex product area','Checked PandaPedia, JIRA, Slack for existing bug reports or workarounds','Collected all required info (SFDC access, JSON payloads, HAR file, console logs, etc.)','Applied T3 Pre-Escalation Note to advise the customer','Changed ticket state to In Progress after applying the Transfer macro'],
+  't2-ci':['Confirmed no substantial progress was made on the original issue','Checked Slack to confirm Support Lead is available','Applied Internal Panda Escalation macro','Mentioned Support Lead AND direct manager in the note','Set High Priority if ticket is near SLA breach'],
+  't2-complaint':['Gathered full details on what happened and the nature of the complaint','Requested screenshots or Salesforce record to verify the interaction','Customer has provided sufficient evidence','Notified Support Manager before contacting AM/CSM\'s manager','Confirmed the relevant AM/CSM manager via Sapling'],
+};
+
+var VERDICTS={
+  't1-tech':{title:'Escalate to T3 — Technical',macros:['Technical Escalation | Automations','Technical Escalation | CRMs & Other Integrations','Technical Escalation | General Escalation','Technical Escalation | Mobile','Technical Escalation | PandaDoc API','Technical Escalation | PDF & DOCX','Technical Escalation | Webhooks','Technical Escalation | Zapier'],note:'Change ticket state to In Progress after applying the macro. For newly released features without a documented solution, use the General Escalation macro.',priority:'Mark as Priority if: 15K ARR/Premium Support, critical workflow affecting multiple customers, unable to Create & Send, or related to Renewal/Upsell closing.'},
+  't1-oos':{title:'Re-route to T2 — Out of Scope',macros:['Transfer Conversation to T2 (warm transfer)','Transfer Ticket to T2'],note:'If T2 confirmed via Slack → warm transfer. If no T2 available → convert to ticket and use Transfer Ticket to T2. Change ticket state to In Progress.',priority:'If near SLA breach: @mention Support Manager on duty and set High Priority.'},
+  't1-ci':{title:'Escalate to T2 — Customer-Initiated',macros:['T2 Pre-Escalation Note','Transfer Ticket to T2'],note:'Must convert conversation to a ticket first. Mention the Support Manager on duty in the note. Change ticket state to In Progress.',priority:'Set High Priority if near SLA breach.'},
+  't1-complaint':{title:'Escalate complaint to Support Manager',macros:['Notify Support Manager directly via Slack'],note:'Once Support Manager confirms, reach out to AM/CSM\'s manager via Slack DM — include your Support Manager. Provide all relevant conversation and Salesforce links.',priority:''},
+  't2-tech':{title:'Escalate to T3 — Technical',macros:['(T2→T3) Technical Escalation | Automations','(T2→T3) Technical Escalation | CRM Integrations','(T2→T3) Technical Escalation | Mobile','(T2→T3) Technical Escalation | PandaDoc API','(T2→T3) Technical Escalation | Webhooks','(T2→T3) Technical Escalation | Zapier'],note:'Include a quick recap of the issue and a JIRA link if available. Change ticket state to In Progress.',priority:'Mark as Priority if: 15K ARR/Premium Support, critical workflow affecting multiple customers, unable to Create & Send, or related to Renewal/Upsell closing.'},
+  't2-ci':{title:'Escalate to Support Lead — Customer-Initiated',macros:['Internal Panda Escalation macro'],note:'Confirm Support Lead is available via Slack. Mention Support Lead AND direct manager. Transfer to Support Leadership queue.',priority:'Set High Priority if near SLA breach.'},
+  't2-complaint':{title:'Escalate complaint to Support Manager',macros:['Notify Support Manager directly via Slack'],note:'Once Support Manager confirms, reach out to AM/CSM\'s manager via Slack — include your Support Manager. Verify manager via Sapling.',priority:''},
+};
+
+var TS_ITEMS=['Reconnect the integration','Clear cache and cookies','Allow 3rd party cookies','Alternative browser','Incognito window','Disable extensions','Recreated issue in PandaDoc','Checked PandaPedia for solution','Reviewed JIRA for known bug','Checked Slack / #support-collab','Verified account permissions','Verified feature provisioning'];
+var ATTACH_ITEMS=['Screen recording','HAR file','Developer console logs','Screenshots','JSON payload','Template / document link','Salesforce error screenshot','Network trace'];
+
+function selectRole(r){
+  state.role=r;
+  document.getElementById('btn-T1').classList.toggle('selected',r==='T1');
+  document.getElementById('btn-T2').classList.toggle('selected',r==='T2');
+  var list=document.getElementById('scenario-list');list.innerHTML='';
+  SCENARIOS[r].forEach(function(s){
+    var b=document.createElement('button');b.className='scenario-btn';
+    b.innerHTML='<div class="s-title">'+s.label+'</div><div class="s-desc">'+s.desc+'</div>';
+    b.onclick=function(){selectScenario(s)};list.appendChild(b);
+  });
+  document.getElementById('bc-scenario').innerHTML='<span class="badge badge-'+r+'">'+r+'</span>';
+  goTo('step-scenario');
+}
+
+function selectScenario(s){
+  state.scenario=s;state.checks={};
+  var checks=CHECKLISTS[s.id]||[];
+  var list=document.getElementById('checklist');list.innerHTML='';
+  checks.forEach(function(c,i){
+    var d=document.createElement('div');d.className='check-item';d.id='ci-'+i;
+    d.innerHTML='<div class="check-left"><div class="check-box" id="cb-'+i+'" onclick="toggleCheck('+i+','+checks.length+')"></div><div class="check-text">'+c+'</div></div><button type="button" class="na-btn" id="na-'+i+'" onclick="toggleNA('+i+','+checks.length+')">N/A</button>';
+    list.appendChild(d);
+  });
+  updateProgress(checks.length);
+  document.getElementById('checklist-warning').style.display='none';
+  var bc='<span class="badge badge-'+state.role+'">'+state.role+'</span> <span style="color:var(--border)">›</span> '+s.label;
+  ['bc-check','bc-form','bc-verdict'].forEach(function(id){
+    document.getElementById(id).innerHTML=bc+(id==='bc-check'?'':' <span style="color:var(--border)">›</span> '+(id==='bc-form'?'Note form':'Note ready'));
+  });
+  buildTSGrid();buildAttachGrid();buildReproSteps();
+  goTo('step-checklist');
+}
+
+function buildTSGrid(){
+  var g=document.getElementById('ts-grid');g.innerHTML='';state.tsChecks={};
+  TS_ITEMS.forEach(function(item,i){
+    var d=document.createElement('div');d.className='ts-item';d.id='ts-'+i;
+    d.innerHTML='<div class="ts-box" id="tsb-'+i+'"></div><span class="ts-label">'+item+'</span><button type="button" class="ts-na-btn" id="tsna-'+i+'" onclick="toggleTSNA('+i+')">N/A</button>';
+    d.querySelector('.ts-box').onclick=function(){toggleTS(i)};g.appendChild(d);
+  });
+}
+
+function buildAttachGrid(){
+  var g=document.getElementById('attach-grid');g.innerHTML='';state.attachChecks={};
+  ATTACH_ITEMS.forEach(function(item,i){
+    var d=document.createElement('div');d.className='ts-item';d.id='att-'+i;
+    d.innerHTML='<div class="ts-box" id="attb-'+i+'"></div><span class="ts-label">'+item+'</span><button type="button" class="ts-na-btn" id="attna-'+i+'" onclick="toggleAttNA('+i+')">N/A</button>';
+    d.querySelector('.ts-box').onclick=function(){toggleAtt(i)};g.appendChild(d);
+  });
+}
+
+function buildReproSteps(){state.reproSteps=[''];renderReproSteps();}
+function renderReproSteps(){
+  var c=document.getElementById('repro-steps');c.innerHTML='';
+  state.reproSteps.forEach(function(v,i){
+    var row=document.createElement('div');row.className='repro-row';
+    row.innerHTML='<span class="repro-num">'+(i+1)+'.</span><input class="repro-input" placeholder="Describe step '+(i+1)+'..." value="'+esc(v)+'" oninput="state.reproSteps['+i+']=this.value"><button type="button" class="repro-rm" onclick="removeRepro('+i+')">✕</button>';
+    c.appendChild(row);
+  });
+}
+function addReproStep(){state.reproSteps.push('');renderReproSteps();setTimeout(function(){var inp=document.querySelectorAll('.repro-input');if(inp.length)inp[inp.length-1].focus();},50);}
+function removeRepro(i){if(state.reproSteps.length<=1)return;state.reproSteps.splice(i,1);renderReproSteps();}
+
+function toggleCheck(i,t){if(state.checks[i]==='na')return;state.checks[i]=state.checks[i]==='done'?null:'done';renderCheck(i);updateProgress(t);}
+function toggleNA(i,t){state.checks[i]=state.checks[i]==='na'?null:'na';renderCheck(i);updateProgress(t);}
+function renderCheck(i){
+  var v=state.checks[i];
+  document.getElementById('ci-'+i).className='check-item'+(v==='done'?' done':v==='na'?' na':'');
+  document.getElementById('cb-'+i).textContent=v==='done'?'✓':v==='na'?'—':'';
+  document.getElementById('na-'+i).className='na-btn'+(v==='na'?' active':'');
+}
+function updateProgress(total){
+  var n=Object.values(state.checks).filter(function(v){return v==='done'||v==='na'}).length;
+  var p=total>0?Math.round((n/total)*100):0;
+  document.getElementById('prog').style.width=p+'%';
+  document.getElementById('prog-label').textContent=n+' of '+total+' complete ('+p+'%)';
+}
+
+function toggleTS(i){if(state.tsChecks[i]==='na')return;state.tsChecks[i]=state.tsChecks[i]==='done'?null:'done';renderTS(i);}
+function toggleTSNA(i){state.tsChecks[i]=state.tsChecks[i]==='na'?null:'na';renderTS(i);}
+function renderTS(i){
+  var v=state.tsChecks[i];
+  document.getElementById('ts-'+i).className='ts-item'+(v==='done'?' done':v==='na'?' na-ts':'');
+  document.getElementById('tsb-'+i).textContent=v==='done'?'✓':v==='na'?'—':'';
+  document.getElementById('tsna-'+i).className='ts-na-btn'+(v==='na'?' active':'');
+}
+function toggleAtt(i){if(state.attachChecks[i]==='na')return;state.attachChecks[i]=state.attachChecks[i]==='done'?null:'done';renderAtt(i);}
+function toggleAttNA(i){state.attachChecks[i]=state.attachChecks[i]==='na'?null:'na';renderAtt(i);}
+function renderAtt(i){
+  var v=state.attachChecks[i];
+  document.getElementById('att-'+i).className='ts-item'+(v==='done'?' done':v==='na'?' na-ts':'');
+  document.getElementById('attb-'+i).textContent=v==='done'?'✓':v==='na'?'—':'';
+  document.getElementById('attna-'+i).className='ts-na-btn'+(v==='na'?' active':'');
+}
+
+function toggleCRM(){
+  document.getElementById('sf-fields').style.display=document.getElementById('f-crm').value==='Salesforce'?'block':'none';
+}
+
+function fv(id){var el=document.getElementById(id);return el?el.value.trim():'';}
+function esc(t){return(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function escNote(t){return(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function generateNote(){
+  if(!fv('f-agent')||!fv('f-ticket')||!fv('f-issue')||!fv('f-expected')){
+    document.getElementById('form-warning').style.display='block';return;
+  }
+  document.getElementById('form-warning').style.display='none';
+  var s=state.scenario;
+  var checks=CHECKLISTS[s.id]||[];
+  var unchecked=checks.filter(function(_,i){return !state.checks[i]}).length;
+  var v=VERDICTS[s.id];
+  var now=new Date();
+  var ds=now.toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'})+' '+now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  var L=[];
+  function line(t){L.push(t===undefined?'':t);}
+  function val(label,id){line(label+': '+(fv(id)||'N/A'));}
+  line('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  line('ESCALATION NOTE');
+  line('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  line('Agent        : '+fv('f-agent'));
+  line('Ticket/Convo : '+fv('f-ticket'));
+  if(fv('f-customer'))line('Customer     : '+fv('f-customer'));
+  if(fv('f-mrr'))line('Client MRR   : '+fv('f-mrr'));
+  line('Date         : '+ds);
+  line('Tier         : '+state.role+' → '+s.dest);
+  line('Type         : '+s.type);
+  line('');
+  line('PRE-ESCALATION CHECKLIST');
+  line('────────────────────────────────────');
+  checks.forEach(function(c,i){var v2=state.checks[i];line((v2==='done'?'[✓]':v2==='na'?'[N/A]':'[ ]')+' '+c);});
+  line('');
+  line('ISSUE DESCRIPTION / ACTUAL RESULT');
+  line('────────────────────────────────────');
+  fv('f-issue').split('\n').forEach(function(l){line('* '+l);});
+  line('');
+  line('EXPECTED RESULT');
+  line('────────────────────────────────────');
+  fv('f-expected').split('\n').forEach(function(l){line('* '+l);});
+  line('');
+  line('DOCUMENT & WORKSPACE INFO');
+  line('────────────────────────────────────');
+  val('Document/Template/Content Library URL','f-docurl');
+  val('Workflow Template URL','f-wfurl');
+  val('Workflow Run URL','f-wfrun');
+  val('Workspace ID','f-wsid');
+  val('Organization ID','f-orgid');
+  val('PandaDoc Owner Email','f-owneremail');
+  val('Affected User Email','f-useremail');
+  val('Affected User License','f-license');
+  val('User Account Role','f-role');
+  line('');
+  var crm=fv('f-crm');
+  if(crm&&crm!=='N/A'&&crm!==''){
+    line('CRM INFORMATION');
+    line('────────────────────────────────────');
+    line('CRM Type: '+crm);
+    val('CRM Object Record ID','f-crmobj');
+    if(crm==='Salesforce'){val('Salesforce Org ID','f-sforg');val('Access to Salesforce Org','f-sfaccess');val('PandaDoc for Salesforce version','f-sfver');}
+    line('');
+  }
+  if(fv('f-repro'))line('Can reproduce issue: '+fv('f-repro'));
+  if(fv('f-jira'))line('JIRA link: '+fv('f-jira'));
+  var repros=state.reproSteps.filter(function(r){return r.trim();});
+  if(repros.length){line('');line('STEPS TO REPRODUCE');line('────────────────────────────────────');repros.forEach(function(r,i){line((i+1)+'. '+r);});}
+  line('');
+  line('TROUBLESHOOTING STEPS TAKEN');
+  line('────────────────────────────────────');
+  TS_ITEMS.forEach(function(item,i){var v2=state.tsChecks[i];line((v2==='done'?'[✔]':v2==='na'?'[N/A]':'[ ]')+' '+item);});
+  var attDone=ATTACH_ITEMS.filter(function(_,i){return state.attachChecks[i]==='done';});
+  var attNA=ATTACH_ITEMS.filter(function(_,i){return state.attachChecks[i]==='na';});
+  if(attDone.length||attNA.length){
+    line('');line('ATTACHMENTS / EVIDENCE COLLECTED');line('────────────────────────────────────');
+    attDone.forEach(function(t){line('[✔] '+t);});
+    attNA.forEach(function(t){line('[N/A] '+t);});
+  }
+  line('');
+  line('ESCALATION PATH');
+  line('────────────────────────────────────');
+  line(v.title);
+  line('Macro(s): '+v.macros.join(' | '));
+  line('Notes: '+v.note);
+  if(v.priority)line('Priority: '+v.priority);
+  line('');
+  line('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+  var noteText=L.join('\n');
+  var html='<div class="verdict escalate"><div class="v-title">'+v.title+'</div><p>'+v.note+'</p>';
+  if(v.priority)html+='<p style="margin-top:.5rem"><strong style="font-size:12px;color:var(--muted)">Priority flag:</strong> '+v.priority+'</p>';
+  html+='</div>';
+  html+='<div class="card"><div class="section-label">Macros to apply</div>';
+  v.macros.forEach(function(m){html+='<span class="macro-tag">'+m+'</span>';});
+  html+='</div>';
+  if(unchecked>0){html+='<div class="warning-box">⚠ '+unchecked+' checklist item(s) not resolved — may result in a mis-escalation flag.</div>';}
+  else{html+='<div class="info-box">✓ All checklist items complete or marked N/A. Ready to escalate.</div>';}
+  html+='<div class="card"><div class="section-label">Copy as internal note</div>';
+  html+='<div style="font-size:12px;color:var(--muted);margin-bottom:.75rem">Paste directly into the Intercom internal note field.</div>';
+  html+='<div class="note-output" id="note-out">'+escNote(noteText)+'</div>';
+  html+='<button class="copy-btn" id="copy-btn" onclick="doCopy()">Copy note</button>';
+  html+='</div>';
+  html+='<div class="card"><div class="section-label">Mis-escalation dispute</div><div style="font-size:13px;color:var(--muted);line-height:1.6">If you receive a mis-escalation flag you believe is in error: go to the original Intercom ticket → click <strong style="color:var(--text)">+</strong> next to Back-office tickets → select <strong style="color:var(--text)">Mis-Escalation Dispute</strong> → fill in the template and @mention your Support Manager. Notify your manager via Slack DM with the ticket link.</div></div>';
+  window._lastNote=noteText;
+  document.getElementById('verdict-content').innerHTML=html;
+  goTo('step-verdict');
+}
+
+function doCopy(){
+  var text=window._lastNote||'';
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(showCopied).catch(function(){fallbackCopy(text);});
+  }else{fallbackCopy(text);}
+}
+function fallbackCopy(text){
+  var ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;opacity:0;top:0;left:0';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');showCopied();}catch(e){}
+  document.body.removeChild(ta);
+}
+function showCopied(){
+  var btn=document.getElementById('copy-btn');if(!btn)return;
+  btn.textContent='✓ Copied!';btn.classList.add('copied');
+  setTimeout(function(){btn.textContent='Copy note';btn.classList.remove('copied');},2500);
+}
+
+function goTo(id){
+  document.querySelectorAll('.step').forEach(function(s){s.classList.remove('active');});
+  document.getElementById(id).classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function restart(){
+  state={role:null,scenario:null,checks:{},tsChecks:{},attachChecks:{},reproSteps:[]};
+  document.getElementById('btn-T1').classList.remove('selected');
+  document.getElementById('btn-T2').classList.remove('selected');
+  ['f-agent','f-ticket','f-customer','f-mrr','f-issue','f-expected','f-jira','f-docurl','f-wfurl','f-wfrun','f-wsid','f-orgid','f-owneremail','f-useremail','f-license','f-role','f-crmobj','f-sforg','f-sfver'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  ['f-repro','f-crm','f-sfaccess'].forEach(function(id){var el=document.getElementById(id);if(el)el.selectedIndex=0;});
+  document.getElementById('sf-fields').style.display='none';
+  goTo('step-role');
+}
+
+buildReproSteps();
+</script>
+</body>
+</html>
